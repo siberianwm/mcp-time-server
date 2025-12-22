@@ -1,0 +1,6 @@
+{
+  "token": "your-secret-token-here",
+  "port": 23386,
+  "path": "/your-random-path",
+  "timezone": "Asia/Bangkok"
+}
