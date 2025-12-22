@@ -44,9 +44,8 @@ claude mcp add time --transport sse \
 {
   "mcpServers": {
     "time": {
-      "command": "npx",
+      "command": "%APPDATA%\\npm\\mcp-remote.cmd",
       "args": [
-        "mcp-remote",
         "https://DOMAIN/PATH/sse",
         "--header",
         "Authorization:Bearer ${MCP_TIME_TOKEN}",
