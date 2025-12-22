@@ -61,11 +61,24 @@ claude mcp add time --transport sse \
 }
 ```
 
-## Xray Fallback
+## Xray + Nginx Setup
 
-```json
-"fallbacks": [
-  {"path": "/PATH/sse", "dest": "127.0.0.1:PORT"},
-  {"path": "/PATH/messages/", "dest": "127.0.0.1:PORT"}
-]
+When running behind Xray VLESS with ALPN-based fallbacks to nginx, add location block to nginx config (both h2 and http/1.1 server blocks):
+
+```nginx
+location /PATH/ {
+    proxy_pass http://127.0.0.1:PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header Connection '';
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 86400s;
+    send_timeout 86400s;
+    chunked_transfer_encoding off;
+    add_header X-Accel-Buffering no;
+}
 ```
+
+Note: Xray path-based fallbacks only work with HTTP/1.1. For HTTP/2 (ALPN h2), requests go to nginx fallback, so nginx location is required.
