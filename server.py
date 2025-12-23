@@ -6,6 +6,14 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+# Monkey-patch SSE to add keepalive ping (prevents connection drops)
+import sse_starlette.sse as sse_module
+_original_init = sse_module.EventSourceResponse.__init__
+def _patched_init(self, *args, **kwargs):
+    kwargs.setdefault("ping", 15)  # Send ping every 15 seconds
+    return _original_init(self, *args, **kwargs)
+sse_module.EventSourceResponse.__init__ = _patched_init
+
 import uvicorn
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth import StaticTokenVerifier
