@@ -14,6 +14,29 @@ def _patched_init(self, *args, **kwargs):
     return _original_init(self, *args, **kwargs)
 sse_module.EventSourceResponse.__init__ = _patched_init
 
+# Monkey-patch MCP SSE to cleanup sessions on disconnect (fixes zombie sessions)
+# See: https://github.com/modelcontextprotocol/python-sdk/issues/1227
+import logging
+from contextlib import asynccontextmanager
+from mcp.server.sse import SseServerTransport
+
+_original_connect_sse = SseServerTransport.connect_sse
+
+@asynccontextmanager
+async def _patched_connect_sse(self, scope, receive, send):
+    async with _original_connect_sse(self, scope, receive, send) as streams:
+        # Find session_id that was just created (last one added)
+        session_id = list(self._read_stream_writers.keys())[-1] if self._read_stream_writers else None
+        try:
+            yield streams
+        finally:
+            # Cleanup session on disconnect
+            if session_id and session_id in self._read_stream_writers:
+                self._read_stream_writers.pop(session_id, None)
+                logging.info(f"[MCP] Session {session_id} cleaned up on disconnect")
+
+SseServerTransport.connect_sse = _patched_connect_sse
+
 import uvicorn
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth import StaticTokenVerifier
